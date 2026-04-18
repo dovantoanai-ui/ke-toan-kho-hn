@@ -745,23 +745,31 @@ function pullDoiSoat(){
   document.getElementById('dsRightCol').innerHTML='';
   document.getElementById('dsRunning').innerHTML='';
   document.getElementById('dsNvTabs').innerHTML='';
+  console.log('[DS] pullDoiSoat ngay=',ngay);
   apiGet({loai:'doi_soat_ngay',action:'get',ngay:ngay}).then(d=>{
+    console.log('[DS] API response:',d);
     if(!d.ok){
       document.getElementById('dsLeftCol').innerHTML='<div class="empty">Lỗi: '+esc(d.msg||'')+'</div>';
       return;
     }
     dsData=d;
+    window._dsData=d; // debug access
     var nvs=Array.from(new Set((d.hds||[]).map(h=>h.nguoiGiao).filter(Boolean)));
+    console.log('[DS] NVs found:',nvs,'hds count:',(d.hds||[]).length);
     if(!nvs.length){
       document.getElementById('dsLeftCol').innerHTML='<div class="empty">Không có HD nào trong ngày '+esc(d.ngay)+'</div>';
       renderDsRunningEmpty();
       return;
     }
-    if(!dsCurNV || nvs.indexOf(dsCurNV)<0) dsCurNV=nvs[0];
+    // Always reset to first NV (not persist across reloads)
+    dsCurNV=nvs[0];
+    console.log('[DS] Selected NV:',dsCurNV);
     renderDsNvTabs();
     renderDsAll();
+    console.log('[DS] Render done');
   }).catch(e=>{
-    document.getElementById('dsLeftCol').innerHTML='<div class="empty">Lỗi kết nối API.</div>';
+    console.error('[DS] API error:',e);
+    document.getElementById('dsLeftCol').innerHTML='<div class="empty" style="color:red;">Lỗi kết nối API: '+esc(e.message||e)+'</div>';
   });
 }
 function renderDsNvTabs(){
@@ -836,7 +844,13 @@ function renderDsRunning(){
   document.getElementById('dsRunning').innerHTML=html;
 }
 function renderDsLeft(){
+  console.log('[DS] renderDsLeft start. dsCurNV=',dsCurNV,' dsData=',dsData);
+  if(!dsData||!dsData.hds){
+    document.getElementById('dsLeftCol').innerHTML='<div class="empty" style="color:red;">dsData không hợp lệ</div>';
+    return;
+  }
   var hds=dsData.hds.filter(h=>h.nguoiGiao===dsCurNV);
+  console.log('[DS] Filtered hds for '+dsCurNV+':',hds.length);
   var clean=hds.filter(h=>(!h.flags||!h.flags.length)&&!h.ktXacNhan).length;
   var ngay=dsData.ngay||'';
   var html='<div class="ds-sec"><div class="ds-sh">'+
