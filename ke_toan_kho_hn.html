@@ -862,20 +862,23 @@ function renderDsLeft(){
     document.getElementById('dsLeftCol').innerHTML=html;
     return;
   }
-  hds.forEach(h=>{
+  try{
+  hds.forEach((h,idx)=>{
+    if(!h){console.warn('[DS] skip null HD idx='+idx);return;}
     var cls='hd-c';
     if(h.ktXacNhan) cls+=' done';
     else if(h.flags&&h.flags.length) cls+=' flag';
     var ckDis=(h.flags&&h.flags.length&&!h.ktXacNhan)?'disabled title="Fix cảnh báo trước khi tick"':'';
     var ckChk=h.ktXacNhan?'checked':'';
-    var shortId=h.hdId.length>8?h.hdId.substr(-4):h.hdId;
+    var hdIdStr=String(h.hdId||'');
+    var shortId=hdIdStr.length>8?hdIdStr.substr(-4):hdIdStr;
     var qdBadge='<span class="bf bf-li">Linh hoạt</span>';
     var qd=(h.ptttQuyDinh||'').toLowerCase();
     if(qd.indexOf('tm')>=0) qdBadge='<span class="bf bf-tm">Quy định TM</span>';
     else if(qd.indexOf('cong no')>=0) qdBadge='<span class="bf bf-cn">Quy định CN</span>';
-    var ttBadge='<span class="bf bf-chua">Chưa TT</span>';
+    var hdTTBadge='<span class="bf bf-chua">Chưa TT</span>';
     var ttLo=(h.thanhToan||'').toLowerCase();
-    if(ttLo && ttLo.indexOf('chua')<0) ttBadge='<span class="bf bf-da">Đã TT</span>';
+    if(ttLo && ttLo.indexOf('chua')<0) hdTTBadge='<span class="bf bf-da">Đã TT</span>';
     var flagBadges=(h.flags||[]).map(f=>{
       var bc=f.type==='sai_quy_dinh'?'bf-er':'bf-wa';
       var txt='⚠ '+(f.type==='sai_quy_dinh'?'Sai quy định':f.type==='chua_co_gia'?'Chưa có giá':f.type==='quen_sl'?'Quên SL':'Sai công thức');
@@ -889,14 +892,14 @@ function renderDsLeft(){
     }
     html+='<div class="'+cls+'">'+
       '<div class="hd-r">'+
-        '<input type="checkbox" class="hd-ck" '+ckChk+' '+ckDis+' onchange="toggleXacNhan(\''+escJ(h.hdId)+'\',this.checked)">'+
+        '<input type="checkbox" class="hd-ck" '+ckChk+' '+ckDis+' onchange="toggleXacNhan(\''+escJ(hdIdStr)+'\',this.checked)">'+
         '<div class="hd-m">'+
           '<div class="hd-t1">'+esc(h.cuaHang||'?')+' <span class="hdid">'+esc(shortId)+'</span></div>'+
-          '<div class="hd-t2">'+qdBadge+' '+ttBadge+' '+flagBadges+' '+tickInfo+'</div>'+
+          '<div class="hd-t2">'+qdBadge+' '+hdTTBadge+' '+flagBadges+' '+tickInfo+'</div>'+
         '</div>'+
         '<div class="hd-tg">'+fmtMoney(h.tongTien||0)+'</div>'+
       '</div>';
-    // SP list (only show if there are real sps with SL > 0)
+    // SP list
     var realSps=(h.sps||[]).filter(s=>s.soLuong>0);
     if(realSps.length){
       html+='<div class="sp-list">'+
@@ -904,13 +907,13 @@ function renderDsLeft(){
       (h.sps||[]).forEach(s=>{
         var phCls=s.isPlaceholder?' ph':'';
         var ckPct=(s.thanhTienGoc>0 && s.thanhTienFinal!==s.thanhTienGoc)?Math.round((1-s.thanhTienFinal/s.thanhTienGoc)*100)+'%':'—';
-        var tt=(s.tinhTrang||'').toLowerCase();
-        var ttBadge='<span class="bf bf-tm">Giao</span>';
-        if(tt.indexOf('tặng')>=0||tt.indexOf('tang')>=0) ttBadge='<span class="bf" style="background:#FFE5B4;color:#854F0B;">Tặng</span>';
-        else if(tt.indexOf('đổi')>=0||tt.indexOf('doi')>=0) ttBadge='<span class="bf" style="background:#E0E0E0;color:#555;">Đổi</span>';
+        var spTt=(s.tinhTrang||'').toLowerCase();
+        var spTtBadge='<span class="bf bf-tm">Giao</span>';
+        if(spTt.indexOf('tặng')>=0||spTt.indexOf('tang')>=0) spTtBadge='<span class="bf" style="background:#FFE5B4;color:#854F0B;">Tặng</span>';
+        else if(spTt.indexOf('đổi')>=0||spTt.indexOf('doi')>=0) spTtBadge='<span class="bf" style="background:#E0E0E0;color:#555;">Đổi</span>';
         html+='<div class="sp-grid'+phCls+'">'+
           '<div>'+esc(s.sanPham||'')+'</div>'+
-          '<div style="text-align:center;">'+ttBadge+'</div>'+
+          '<div style="text-align:center;">'+spTtBadge+'</div>'+
           '<div class="num">'+(s.soLuong||0)+'</div>'+
           '<div class="num">'+(s.donGia?s.donGia.toLocaleString('vi-VN'):'—')+'</div>'+
           '<div class="num">'+(s.thanhTienGoc?s.thanhTienGoc.toLocaleString('vi-VN'):'0')+'</div>'+
@@ -922,8 +925,14 @@ function renderDsLeft(){
     }
     html+='</div>';
   });
+  }catch(eL){
+    console.error('[DS] forEach HD error:',eL,'html so far len=',html.length);
+    html+='<div style="color:red; padding:12px;">Lỗi khi render HD: '+esc(eL.message)+'<br><small>'+esc(eL.stack||'')+'</small></div>';
+  }
   html+='</div>';
+  console.log('[DS] renderDsLeft setting innerHTML, html len=',html.length);
   document.getElementById('dsLeftCol').innerHTML=html;
+  console.log('[DS] renderDsLeft DONE');
 }
 function renderDsRight(){
   var kho=(dsData.tonKho||[]).filter(k=>k.nguoiGiao===dsCurNV);
