@@ -915,6 +915,7 @@ function renderDsLeft(){
     else if(h.flags&&h.flags.length) cls+=' flag';
     var ckDis=(h.flags&&h.flags.length&&!h.ktXacNhan)?'disabled title="Fix cảnh báo trước khi tick"':'';
     if(isLocked && !h.ktXacNhan) ckDis='disabled title="Ngày đã khóa"';
+    if(h.ktXacNhan) ckDis='disabled title="Đã duyệt - không thể bỏ tick. Sửa trực tiếp trong Sheet nếu cần."';
     var ckChk=h.ktXacNhan?'checked':'';
     var hdIdStr=String(h.hdId||'');
     var shortId=hdIdStr.length>8?hdIdStr.substr(-4):hdIdStr;
@@ -1108,20 +1109,25 @@ function fmtTui(n){n=n||0;if(n===Math.round(n))return Math.round(n).toLocaleStri
 
 function toggleXacNhan(hdId,checked){
   if(!MY_NAME){toast('Cần cấu hình tên KT trước','err');goTab('caidat');return;}
-  apiPost({loai:'xac_nhan_hd',hdId:hdId,xacNhan:checked,ktTen:MY_NAME}).then(d=>{
+  if(!checked){
+    alert('Không thể bỏ tick.\n\nHD đã duyệt không thể thay đổi qua web. Nếu cần sửa, vui lòng chỉnh trực tiếp trong Google Sheet HoaDon (cột KT_xac_nhan).');
+    pullDoiSoat();
+    return;
+  }
+  apiPost({loai:'xac_nhan_hd',hdId:hdId,xacNhan:true,ktTen:MY_NAME}).then(d=>{
     if(!d.ok){
       if(d.locked){alert('🔒 '+d.msg);}else{toast('Lỗi: '+d.msg,'err');}
       pullDoiSoat();return;
     }
     // Update local state
     dsData.hds.filter(h=>h.hdId===hdId).forEach(h=>{
-      h.ktXacNhan=checked;
-      h.ktTickBoi=checked?MY_NAME:'';
-      h.ktTickThoiGian=checked?new Date().toISOString():null;
+      h.ktXacNhan=true;
+      h.ktTickBoi=MY_NAME;
+      h.ktTickThoiGian=new Date().toISOString();
     });
     renderDsNvTabs();
     renderDsAll();
-    toast(checked?'Đã xác nhận HD':'Đã bỏ xác nhận','ok');
+    toast('Đã xác nhận HD','ok');
   }).catch(e=>{toast('Lỗi kết nối','err');pullDoiSoat();});
 }
 function batchDuyet(){
@@ -1147,16 +1153,16 @@ let ctHdCur=null;
 function openChinhTienModal(hdId){
   if(!MY_NAME){toast('Cần cấu hình tên KT','err');goTab('caidat');return;}
   // Find HD info - tu dsData hoac congNoData
-  var h=null, tienGoc=0, cuaHang='', info='';
+  var h=null, tienGoc=0, cuaHang='', info='', found=false;
   if(dsData && dsData.hds){
     h=dsData.hds.find(x=>x.hdId===hdId);
-    if(h){tienGoc=h.tongTien||0; cuaHang=h.cuaHang; info='NV: '+esc(h.nguoiGiao||'?');}
+    if(h){tienGoc=h.tongTien||0; cuaHang=h.cuaHang; info='NV: '+esc(h.nguoiGiao||'?'); found=true;}
   }
-  if(!h && congNoData && congNoData.items){
+  if(!found && congNoData && congNoData.items){
     var c=congNoData.items.find(x=>x.soHD===hdId);
-    if(c){tienGoc=c.tongTien||0; cuaHang=c.tenCH||''; info='Ngày: '+esc(c.ngayHD||'?');}
+    if(c){tienGoc=c.tongTien||0; cuaHang=c.tenCH||''; info='Ngày: '+esc(c.ngayHD||'?'); found=true;}
   }
-  if(!tienGoc){toast('Không tìm thấy HD '+hdId,'err');return;}
+  if(!found){toast('Không tìm thấy HD '+hdId,'err');return;}
 
   ctHdCur={hdId:hdId, tienGoc:tienGoc, cuaHang:cuaHang};
   document.getElementById('ctSub').textContent=cuaHang+' · '+hdId.substr(-4);
