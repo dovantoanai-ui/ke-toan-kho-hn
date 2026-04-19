@@ -852,12 +852,13 @@ function renderDsRunningEmpty(){
 function renderDsRunning(){
   var hds=dsData.hds.filter(h=>h.nguoiGiao===dsCurNV);
   var ticked=hds.filter(h=>h.ktXacNhan);
-  // Tien mat NV can nop = SUM tongTien of ticked HDs where Thanh toan contains "da"
+  // Tien mat NV can nop = SUM tongTien of ticked HDs da TT
   var tienMat=0;
+  var tickedDaTT=0;
   ticked.forEach(h=>{
-    var tt=(h.thanhToan||'').toLowerCase();
-    if(tt.indexOf('chua')<0 && tt.indexOf('đã')>=0 || tt.indexOf('da thanh toan')>=0 || (tt && tt.indexOf('chua')<0)){
+    if(isDaTT(h.thanhToan)){
       tienMat+=h.tongTien||0;
+      tickedDaTT++;
     }
   });
   // SUM SP cộng dồn (tất cả HD đã tick, kể cả Chưa TT)
@@ -873,7 +874,7 @@ function renderDsRunning(){
   var html=
     '<div><div class="rt-l">Tiền mặt '+esc(dsCurNV)+' cần nộp</div>'+
       '<div class="rt-v">'+fmtMoney(tienMat)+'</div>'+
-      '<div class="rt-sub">'+ticked.filter(h=>{var tt=(h.thanhToan||'').toLowerCase();return tt.indexOf('chua')<0;}).length+' HD "Đã TT" đã tick</div></div>'+
+      '<div class="rt-sub">'+tickedDaTT+' HD "Đã TT" đã tick</div></div>'+
     '<div><div class="rt-l">Đã duyệt / Tổng</div>'+
       '<div class="rt-v">'+ticked.length+' / '+hds.length+' HD</div></div>'+
     '<div><div class="rt-l">SP tick cộng dồn (túi)</div>'+
@@ -921,9 +922,7 @@ function renderDsLeft(){
     var qd=(h.ptttQuyDinh||'').toLowerCase();
     if(qd.indexOf('tm')>=0) qdBadge='<span class="bf bf-tm">Quy định TM</span>';
     else if(qd.indexOf('cong no')>=0) qdBadge='<span class="bf bf-cn">Quy định CN</span>';
-    var hdTTBadge='<span class="bf bf-chua">Chưa TT</span>';
-    var ttLo=(h.thanhToan||'').toLowerCase();
-    if(ttLo && ttLo.indexOf('chua')<0) hdTTBadge='<span class="bf bf-da">Đã TT</span>';
+    var hdTTBadge=isDaTT(h.thanhToan)?'<span class="bf bf-da">Đã TT</span>':'<span class="bf bf-chua">Chưa TT</span>';
     var flagBadges=(h.flags||[]).map(f=>{
       var bc=f.type==='sai_quy_dinh'?'bf-er':'bf-wa';
       var txt='⚠ '+(f.type==='sai_quy_dinh'?'Sai quy định':f.type==='chua_co_gia'?'Chưa có giá':f.type==='quen_sl'?'Quên SL':'Sai công thức');
@@ -1010,6 +1009,15 @@ function renderDsLeft(){
   console.log('[DS] renderDsLeft DONE');
 }
 function normStr(s){return String(s||'').toLowerCase().trim().replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a').replace(/[èéẹẻẽêềếệểễ]/g,'e').replace(/[ìíịỉĩ]/g,'i').replace(/[òóọỏõôồốộổỗơờớợởỡ]/g,'o').replace(/[ùúụủũưừứựửữ]/g,'u').replace(/[ỳýỵỷỹ]/g,'y').replace(/đ/g,'d').replace(/\s+/g,'').replace(/[^a-z0-9]/g,'');}
+// Check HD da thanh toan chua. "Chua thanh toan" / "Chưa thanh toán" / trong = CHUA TT
+// "Da thanh toan" / "Đã thanh toán" = DA TT
+function isDaTT(thanhToan){
+  var s=String(thanhToan||'').toLowerCase().trim().replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a').replace(/[èéẹẻẽêềếệểễ]/g,'e').replace(/[ìíịỉĩ]/g,'i').replace(/[òóọỏõôồốộổỗơờớợởỡ]/g,'o').replace(/[ùúụủũưừứựửữ]/g,'u').replace(/[ỳýỵỷỹ]/g,'y').replace(/đ/g,'d');
+  if(!s) return false; // rong = Chua TT
+  if(s.indexOf('chua')>=0) return false;
+  if(s.indexOf('da')>=0 || s.indexOf('roi')>=0) return true;
+  return false;
+}
 function renderDsRight(){
   var kho=(dsData.tonKho||[]).filter(k=>normStr(k.nguoiGiao)===normStr(dsCurNV));
   var notes=(dsData.notes||{});
