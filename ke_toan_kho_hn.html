@@ -922,8 +922,9 @@ function renderDsLeft(){
   document.getElementById('dsLeftCol').innerHTML=html;
   console.log('[DS] renderDsLeft DONE');
 }
+function normStr(s){return String(s||'').toLowerCase().trim().replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a').replace(/[èéẹẻẽêềếệểễ]/g,'e').replace(/[ìíịỉĩ]/g,'i').replace(/[òóọỏõôồốộổỗơờớợởỡ]/g,'o').replace(/[ùúụủũưừứựửữ]/g,'u').replace(/[ỳýỵỷỹ]/g,'y').replace(/đ/g,'d');}
 function renderDsRight(){
-  var kho=(dsData.tonKho||[]).filter(k=>k.nguoiGiao===dsCurNV);
+  var kho=(dsData.tonKho||[]).filter(k=>normStr(k.nguoiGiao)===normStr(dsCurNV));
   var html='<div class="kho-p"><div class="kho-h2">'+
     '<div class="nm">Kho '+esc(dsCurNV)+' · '+esc(dsData.ngay)+'</div>'+
     '<div class="sub">Đối soát xe · theo TÚI</div>'+
