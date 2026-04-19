@@ -214,6 +214,8 @@ input,select,textarea { font-family:inherit; font-size:14px; }
 .hd-t1 .hdid { font-family:monospace; font-weight:400; color:var(--mu); font-size:10px; margin-left:4px; }
 .hd-t2 { font-size:10px; color:var(--mu); margin-top:2px; display:flex; gap:4px; align-items:center; flex-wrap:wrap; }
 .hd-tg { font-size:12px; font-weight:500; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.hd-tg.editable { cursor:pointer; color:#185FA5; padding:2px 6px; border-radius:4px; }
+.hd-tg.editable:hover { background:#F0F6FC; }
 .sp-list { margin-top:5px; padding:6px 10px; background:rgba(0,0,0,0.02); border-radius:4px; margin-left:24px; font-size:10px; }
 .sp-grid { display:grid; grid-template-columns:2fr 50px 40px 70px 80px 40px 85px; gap:6px; padding:2px 0; align-items:center; }
 .sp-grid .num { text-align:right; font-variant-numeric:tabular-nums; }
@@ -261,6 +263,18 @@ input,select,textarea { font-family:inherit; font-size:14px; }
 .kho-leg .dot.re { background:#F09595; }
 .kho-leg .dot.am { background:#FAC775; }
 .tick-note-i { color:var(--gr); font-weight:500; font-size:10px; }
+.lock-banner { background:#FCEBEB; border:1px solid var(--re); border-radius:6px; padding:10px 14px; font-size:12px; color:var(--red); margin-bottom:10px; font-weight:500; }
+.note-banner { padding:10px 12px; border-bottom:1px solid var(--bd); }
+.note-banner.warn { background:#FEF4E5; }
+.note-banner.done { background:#EAF3DE; }
+.note-banner .nb-t { font-size:11px; font-weight:600; margin-bottom:6px; }
+.note-banner.warn .nb-t { color:var(--amd); }
+.note-banner.done .nb-t { color:var(--grd); }
+.note-banner textarea { width:100%; padding:6px; font-size:11px; border:1px solid var(--bd2); border-radius:4px; font-family:inherit; resize:vertical; min-height:48px; box-sizing:border-box; }
+.note-banner textarea:focus { border-color:var(--gr); outline:none; }
+.note-banner .nb-bb { display:flex; gap:6px; margin-top:6px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.btn-save-note { padding:5px 12px; font-size:11px; background:var(--gr); color:#fff; border:none; border-radius:4px; font-weight:500; cursor:pointer; }
+.btn-save-note:hover { background:var(--grd); }
 </style>
 </head>
 <body>
@@ -446,6 +460,43 @@ input,select,textarea { font-family:inherit; font-size:14px; }
   </div>
 </div>
 
+<div id="ctModal" class="modal">
+  <div class="modal-bx">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-hd-t">✎ Chỉnh tiền HD</div>
+        <div class="modal-hd-s" id="ctSub">-</div>
+      </div>
+      <button class="btn-hd" onclick="closeChinhTienModal()" style="padding:4px 10px;">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="money-bx">
+        <div class="money-lb">Tiền gốc (sau CK+VAT)</div>
+        <div class="money-v" id="ctTienGoc">-</div>
+        <div class="money-h" id="ctInfo">-</div>
+      </div>
+      <div class="form-r">
+        <div class="form-l">Số tiền điều chỉnh (đ)</div>
+        <input type="text" inputmode="numeric" class="form-i big" id="ctTienMoi" oninput="ctPreview()">
+        <div id="ctDeltaPreview" style="font-size:11px; margin-top:4px; text-align:right;"></div>
+      </div>
+      <div class="form-r">
+        <div class="form-l">Lý do điều chỉnh <span style="color:#C44;">*</span></div>
+        <textarea class="form-ta" id="ctLyDo" placeholder="VD: Làm tròn cho CH quen · CK đột xuất do hàng dập · Sai giá ghi HD..."></textarea>
+        <div style="font-size:10px; color:var(--mu); margin-top:2px;">Bắt buộc. Sẽ lưu vào log HoaDon_DieuChinh.</div>
+      </div>
+      <div id="ctHistBox" style="display:none; background:#F0F6FC; border-left:3px solid #185FA5; padding:8px 10px; margin-top:8px; border-radius:4px; font-size:11px;">
+        <div style="font-weight:600; color:#185FA5; margin-bottom:4px;">Lịch sử chỉnh</div>
+        <div id="ctHistList"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeChinhTienModal()">Hủy</button>
+      <button class="btn primary" style="flex:2;" onclick="ctSubmit()" id="ctBtn">✓ Lưu điều chỉnh</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -612,7 +663,7 @@ function renderChuaThu(){
       '<td class="opt" style="font-size:12px; color:var(--mu);">'+fmtDate(r.ngayHD)+'</td>'+
       '<td><div class="status-p">'+fmtDate(r.hanThu)+' '+stBadge+'</div></td>'+
       '<td>'+trangThai+'</td>'+
-      '<td class="num">'+fmtMoney(r.tongTien)+'</td>'+
+      '<td class="num tong-editable" onclick="openChinhTienModal(\''+escJ(r.soHD)+'\')" title="Click để chỉnh tiền" style="cursor:pointer; color:#185FA5;">'+fmtMoney(r.tongTien)+' <span style="font-size:10px; opacity:0.5;">✎</span></td>'+
       '<td class="num opt" style="color:var(--mu); font-size:12px;">'+(r.daTra>0?fmtMoney(r.daTra):'-')+'</td>'+
       '<td class="num" style="color:var(--re); font-weight:600;">'+fmtMoney(r.conLai)+'</td>'+
       '<td><button class="btn bl sm" onclick="openThuModal(\''+escJ(r.tenCH)+'\',\''+escJ(r.soHD)+'\')">Thu</button></td>'+
@@ -837,13 +888,18 @@ function renderDsLeft(){
     document.getElementById('dsLeftCol').innerHTML='<div class="empty" style="color:red;">dsData không hợp lệ</div>';
     return;
   }
+  var isLocked=dsData.locked===true;
   var hds=dsData.hds.filter(h=>h.nguoiGiao===dsCurNV);
   console.log('[DS] Filtered hds for '+dsCurNV+':',hds.length);
   var clean=hds.filter(h=>(!h.flags||!h.flags.length)&&!h.ktXacNhan).length;
   var ngay=dsData.ngay||'';
-  var html='<div class="ds-sec"><div class="ds-sh">'+
+  var html='';
+  if(isLocked){
+    html+='<div class="lock-banner">🔒 Ngày '+esc(ngay)+' đã khóa · Sau '+(dsData.khoaSauNgay||2)+' ngày không sửa được (tick HD, chỉnh tiền, thu tiền). Note kho vẫn chỉnh được.</div>';
+  }
+  html+='<div class="ds-sec"><div class="ds-sh">'+
     '<span>Hóa đơn của '+esc(dsCurNV)+' · '+esc(ngay)+'</span>';
-  if(clean>0) html+='<button onclick="batchDuyet()">Duyệt tất cả không cảnh báo ('+clean+')</button>';
+  if(clean>0 && !isLocked) html+='<button onclick="batchDuyet()">Duyệt tất cả không cảnh báo ('+clean+')</button>';
   html+='</div>';
   if(!hds.length){
     html+='<div class="empty" style="padding:30px;">Không có HD</div></div>';
@@ -857,6 +913,7 @@ function renderDsLeft(){
     if(h.ktXacNhan) cls+=' done';
     else if(h.flags&&h.flags.length) cls+=' flag';
     var ckDis=(h.flags&&h.flags.length&&!h.ktXacNhan)?'disabled title="Fix cảnh báo trước khi tick"':'';
+    if(isLocked && !h.ktXacNhan) ckDis='disabled title="Ngày đã khóa"';
     var ckChk=h.ktXacNhan?'checked':'';
     var hdIdStr=String(h.hdId||'');
     var shortId=hdIdStr.length>8?hdIdStr.substr(-4):hdIdStr;
@@ -878,14 +935,26 @@ function renderDsLeft(){
       var timeStr=t?String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'):'';
       tickInfo='<span class="bf bf-ok">✓ '+esc(h.ktTickBoi||'KT')+' · '+timeStr+'</span>';
     }
+    var dcHist=(dsData.dieuChinh && dsData.dieuChinh[hdIdStr]) || [];
+    var dcBadge='';
+    var tgDisplay='';
+    if(dcHist.length){
+      var last=dcHist[dcHist.length-1];
+      dcBadge=' <span class="bf" style="background:#D1E4F6; color:#185FA5;">✎ KT chỉnh '+(last.delta>=0?'+':'')+fmtMoney(last.delta)+'</span>';
+      tgDisplay='<span style="text-decoration:line-through; color:#999; font-size:10px; margin-right:4px;">'+Math.round(last.tienGoc).toLocaleString('vi-VN')+'</span>'+fmtMoney(h.tongTien||0);
+    }else{
+      tgDisplay=fmtMoney(h.tongTien||0);
+    }
     html+='<div class="'+cls+'">'+
       '<div class="hd-r">'+
         '<input type="checkbox" class="hd-ck" '+ckChk+' '+ckDis+' onchange="toggleXacNhan(\''+escJ(hdIdStr)+'\',this.checked)">'+
         '<div class="hd-m">'+
           '<div class="hd-t1">'+esc(h.cuaHang||'?')+' <span class="hdid">'+esc(shortId)+'</span></div>'+
-          '<div class="hd-t2">'+qdBadge+' '+hdTTBadge+' '+flagBadges+' '+tickInfo+'</div>'+
+          '<div class="hd-t2">'+qdBadge+' '+hdTTBadge+' '+flagBadges+dcBadge+' '+tickInfo+'</div>'+
         '</div>'+
-        '<div class="hd-tg">'+fmtMoney(h.tongTien||0)+'</div>'+
+        (isLocked
+          ? '<div class="hd-tg" style="color:#999;" title="Ngày đã khóa">'+tgDisplay+'</div>'
+          : '<div class="hd-tg editable" onclick="openChinhTienModal(\''+escJ(hdIdStr)+'\')" title="Click để chỉnh tiền">'+tgDisplay+' <span style="font-size:10px; opacity:0.5;">✎</span></div>')+
       '</div>';
     // SP list
     var realSps=(h.sps||[]).filter(s=>s.soLuong>0);
@@ -925,6 +994,8 @@ function renderDsLeft(){
 function normStr(s){return String(s||'').toLowerCase().trim().replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a').replace(/[èéẹẻẽêềếệểễ]/g,'e').replace(/[ìíịỉĩ]/g,'i').replace(/[òóọỏõôồốộổỗơờớợởỡ]/g,'o').replace(/[ùúụủũưừứựửữ]/g,'u').replace(/[ỳýỵỷỹ]/g,'y').replace(/đ/g,'d');}
 function renderDsRight(){
   var kho=(dsData.tonKho||[]).filter(k=>normStr(k.nguoiGiao)===normStr(dsCurNV));
+  var notes=(dsData.notes||{});
+  var noteObj=notes[normStr(dsCurNV)]||null;
   var html='<div class="kho-p"><div class="kho-h2">'+
     '<div class="nm">Kho '+esc(dsCurNV)+' · '+esc(dsData.ngay)+'</div>'+
     '<div class="sub">Đối soát xe · theo TÚI</div>'+
@@ -934,17 +1005,40 @@ function renderDsRight(){
     document.getElementById('dsRightCol').innerHTML=html;
     return;
   }
+  // Count lech first
+  var lechCount=kho.filter(k=>k.trangThai==='lech').length;
+
+  // Note banner: hien khi co lech (chua note) hoac da co note
+  if(lechCount>0 || noteObj){
+    var hasNote=noteObj && noteObj.note;
+    var cls=hasNote?'note-banner done':'note-banner warn';
+    var title=hasNote?'✓ Đã xử lý · '+esc(noteObj.kt||'KT'):'⚠ Kho lệch - note lý do (cuối ngày HD và kho phải khớp)';
+    var noteVal=hasNote?esc(noteObj.note):'';
+    html+='<div class="'+cls+'">'+
+      '<div class="nb-t">'+title+'</div>'+
+      '<textarea id="dsKhoNote" placeholder="VD: NV báo quên ghi Mang về Nem Thịnh 2 túi. Các SP khác giao hết đúng.">'+noteVal+'</textarea>'+
+      '<div class="nb-bb">';
+    if(hasNote){
+      var t=noteObj.thoiGian?new Date(noteObj.thoiGian):null;
+      var ts=t?t.toLocaleString('vi-VN'):'';
+      html+='<span style="font-size:10px; color:var(--grd);">Lưu lúc '+esc(ts)+'</span>';
+      html+='<button class="btn-save-note" onclick="luuNoteKho()">Cập nhật note</button>';
+    }else{
+      html+='<span style="font-size:10px; color:var(--amd);">Note chung cả ngày của '+esc(dsCurNV)+'</span>';
+      html+='<button class="btn-save-note" onclick="luuNoteKho()">Lưu note</button>';
+    }
+    html+='</div></div>';
+  }
+
   html+='<div class="k-row head"><div>Sản phẩm</div><div class="n">Đi</div><div class="n">Giao</div><div class="n">Về</div><div class="n">Δ</div></div>';
-  var lechCount=0, choCount=0, chuaDnCount=0, totalDi=0;
+  var chuaDnCount=0, totalDi=0;
   kho.forEach(k=>{
     var cls='k-row '+(k.trangThai||'chua_co_kho');
-    if(k.trangThai==='lech') lechCount++;
-    if(k.trangThai==='cho_ve') choCount++;
     if(k.trangThai==='chua_dinh_nghia') chuaDnCount++;
     totalDi+=k.khoDi||0;
     var cptBadge=k.coQuyDoi?'<span class="spsub">·'+k.caiPerTui+'c/t</span>':'<span class="spsub" style="color:var(--re);">·⚠ chưa ĐN</span>';
     var diTxt=k.coKhoDi?fmtTui(k.khoDi)+'<span class="raw">'+k.khoDiCai+'c</span>':'—';
-    var veTxt=k.coKhoVe?fmtTui(k.khoVe)+'<span class="raw">'+k.khoVeCai+'c</span>':'—';
+    var veTxt=k.coKhoVe?fmtTui(k.khoVe)+'<span class="raw">'+k.khoVeCai+'c</span>':(k.coKhoDi?'0':'—');
     var dlTxt='?';
     if(k.trangThai==='khop') dlTxt='0';
     else if(k.trangThai==='lech') dlTxt=(k.delta>0?'+':'')+fmtTui(k.delta);
@@ -960,23 +1054,39 @@ function renderDsRight(){
   html+='<div class="kho-sum">'+
     '<div class="kho-sum-r"><span style="color:var(--mu);">'+kho.length+' SP</span><span>Đi '+fmtTui(totalDi)+' túi</span></div>';
   if(lechCount) html+='<div class="kho-sum-r flag"><span>⚠ '+lechCount+' SP lệch</span><span>Kiểm tra</span></div>';
-  if(choCount) html+='<div class="kho-sum-r" style="color:var(--amd);"><span>'+choCount+' SP chờ NV về</span><span>—</span></div>';
   if(chuaDnCount) html+='<div class="kho-sum-r flag"><span>⚠ '+chuaDnCount+' SP chưa ĐN</span><span>Thêm vào bảng</span></div>';
   html+='</div>'+
     '<div class="kho-leg">'+
       '<span><span class="dot gr"></span>Khớp HD</span>'+
       '<span><span class="dot re"></span>Lệch</span>'+
-      '<span><span class="dot am"></span>Chờ về</span>'+
     '</div>'+
   '</div>';
   document.getElementById('dsRightCol').innerHTML=html;
+}
+function luuNoteKho(){
+  if(!MY_NAME){toast('Cần cấu hình tên KT trước','err');goTab('caidat');return;}
+  var el=document.getElementById('dsKhoNote');
+  if(!el){return;}
+  var note=el.value.trim();
+  if(!note){toast('Vui lòng nhập nội dung note','err');return;}
+  apiPost({loai:'luu_note_kho',ngay:dsData.ngay,nv:dsCurNV,note:note,kt:MY_NAME}).then(d=>{
+    if(!d.ok){toast('Lỗi: '+d.msg,'err');return;}
+    // Update local state
+    if(!dsData.notes) dsData.notes={};
+    dsData.notes[normStr(dsCurNV)]={note:note,kt:MY_NAME,thoiGian:d.thoiGian};
+    renderDsRight();
+    toast('Đã lưu note','ok');
+  }).catch(e=>{toast('Lỗi kết nối','err');});
 }
 function fmtTui(n){n=n||0;if(n===Math.round(n))return Math.round(n).toLocaleString('vi-VN');return n.toFixed(2);}
 
 function toggleXacNhan(hdId,checked){
   if(!MY_NAME){toast('Cần cấu hình tên KT trước','err');goTab('caidat');return;}
   apiPost({loai:'xac_nhan_hd',hdId:hdId,xacNhan:checked,ktTen:MY_NAME}).then(d=>{
-    if(!d.ok){toast('Lỗi: '+d.msg,'err');pullDoiSoat();return;}
+    if(!d.ok){
+      if(d.locked){alert('🔒 '+d.msg);}else{toast('Lỗi: '+d.msg,'err');}
+      pullDoiSoat();return;
+    }
     // Update local state
     dsData.hds.filter(h=>h.hdId===hdId).forEach(h=>{
       h.ktXacNhan=checked;
@@ -1003,6 +1113,95 @@ function batchDuyet(){
     toast('Đã duyệt '+done+(errs?' (lỗi '+errs+')':''),done?'ok':'err');
     renderDsNvTabs();
     renderDsAll();
+  });
+}
+
+// Chinh tien HD
+let ctHdCur=null;
+function openChinhTienModal(hdId){
+  if(!MY_NAME){toast('Cần cấu hình tên KT','err');goTab('caidat');return;}
+  // Find HD info - tu dsData hoac congNoData
+  var h=null, tienGoc=0, cuaHang='', info='';
+  if(dsData && dsData.hds){
+    h=dsData.hds.find(x=>x.hdId===hdId);
+    if(h){tienGoc=h.tongTien||0; cuaHang=h.cuaHang; info='NV: '+esc(h.nguoiGiao||'?');}
+  }
+  if(!h && congNoData && congNoData.items){
+    var c=congNoData.items.find(x=>x.soHD===hdId);
+    if(c){tienGoc=c.tongTien||0; cuaHang=c.tenCH||''; info='Ngày: '+esc(c.ngayHD||'?');}
+  }
+  if(!tienGoc){toast('Không tìm thấy HD '+hdId,'err');return;}
+
+  ctHdCur={hdId:hdId, tienGoc:tienGoc, cuaHang:cuaHang};
+  document.getElementById('ctSub').textContent=cuaHang+' · '+hdId.substr(-4);
+  document.getElementById('ctTienGoc').textContent=fmtMoney(tienGoc);
+  document.getElementById('ctInfo').textContent=info;
+  document.getElementById('ctTienMoi').value=String(Math.round(tienGoc));
+  document.getElementById('ctLyDo').value='';
+  ctPreview();
+
+  // Show history if exists
+  var hist=(dsData && dsData.dieuChinh && dsData.dieuChinh[hdId]) || [];
+  var histBox=document.getElementById('ctHistBox');
+  var histList=document.getElementById('ctHistList');
+  if(hist.length){
+    histBox.style.display='block';
+    histList.innerHTML=hist.map(it=>{
+      var t=it.thoiGian?new Date(it.thoiGian).toLocaleString('vi-VN'):'';
+      var d=it.delta>=0?'+'+fmtMoney(it.delta):fmtMoney(it.delta).replace('đ','')+'đ';
+      return '<div style="padding:4px 0; border-top:1px dashed #ddd;">'+
+        '<b>'+esc(it.kt)+'</b> · '+esc(t)+' · '+fmtMoney(it.tienGoc)+' → '+fmtMoney(it.tienMoi)+' ('+d+')'+
+        '<br><span style="color:#666;">Lý do: '+esc(it.lyDo)+'</span></div>';
+    }).join('');
+  }else{
+    histBox.style.display='none';
+  }
+
+  document.getElementById('ctModal').classList.add('show');
+}
+function closeChinhTienModal(){
+  document.getElementById('ctModal').classList.remove('show');
+  ctHdCur=null;
+}
+function ctPreview(){
+  if(!ctHdCur)return;
+  var raw=document.getElementById('ctTienMoi').value.replace(/[^\d]/g,'');
+  var tm=parseFloat(raw)||0;
+  var delta=tm-ctHdCur.tienGoc;
+  var pct=ctHdCur.tienGoc?(delta/ctHdCur.tienGoc*100):0;
+  var el=document.getElementById('ctDeltaPreview');
+  if(delta===0){
+    el.innerHTML='<span style="color:var(--mu);">Không thay đổi</span>';
+  }else{
+    var sign=delta>0?'+':'';
+    var color=delta<0?'#854F0B':'#27500A';
+    el.innerHTML='<span style="color:'+color+'; font-weight:600;">'+sign+fmtMoney(delta)+' ('+sign+pct.toFixed(1)+'%)</span>';
+  }
+}
+function ctSubmit(){
+  if(!ctHdCur)return;
+  if(!MY_NAME){toast('Cần cấu hình tên KT','err');return;}
+  var raw=document.getElementById('ctTienMoi').value.replace(/[^\d]/g,'');
+  var tm=parseFloat(raw);
+  if(isNaN(tm) || tm<0){toast('Số tiền không hợp lệ','err');return;}
+  var lyDo=document.getElementById('ctLyDo').value.trim();
+  if(!lyDo){toast('Vui lòng nhập lý do','err');return;}
+  if(tm===ctHdCur.tienGoc){toast('Số tiền không thay đổi','err');return;}
+
+  var btn=document.getElementById('ctBtn');
+  btn.disabled=true; btn.textContent='Đang lưu...';
+
+  apiPost({loai:'chinh_tien_hd', hdId:ctHdCur.hdId, tienMoi:tm, lyDo:lyDo, ktTen:MY_NAME}).then(d=>{
+    btn.disabled=false; btn.textContent='✓ Lưu điều chỉnh';
+    if(!d.ok){toast('Lỗi: '+d.msg,'err');return;}
+    toast('Đã chỉnh tiền HD '+(d.congNoUpdated?'(CongNo đã update)':''),'ok');
+    closeChinhTienModal();
+    // Reload data
+    if(document.getElementById('pg-doisoat').classList.contains('on')) pullDoiSoat();
+    if(document.getElementById('pg-chuathu').classList.contains('on')) pullCongNo();
+  }).catch(e=>{
+    btn.disabled=false; btn.textContent='✓ Lưu điều chỉnh';
+    toast('Lỗi kết nối','err');
   });
 }
 
