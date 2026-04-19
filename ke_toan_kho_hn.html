@@ -959,11 +959,22 @@ function renderDsLeft(){
     // SP list
     var realSps=(h.sps||[]).filter(s=>s.soLuong>0);
     if(realSps.length){
+      // Tinh tong HD level: Tong thanh tien goc (sum SL*DonGia) va Tong sau VAT (tong tien - nam o row _0)
+      var tongGoc=0;
+      (h.sps||[]).forEach(s=>{tongGoc+=(s.thanhTienGoc||0);});
+      var tongFinal=h.tongTien||0;
+      // CK% HD = (1 - Final/Goc) * 100, chi co khi Goc > 0
+      var ckPctHD='—';
+      if(tongGoc>0 && Math.abs(tongFinal-tongGoc)>1){
+        var pct=Math.round((1-tongFinal/tongGoc)*100);
+        ckPctHD=(pct>0?'-':'+')+Math.abs(pct)+'%';
+      }else if(tongGoc>0 && Math.abs(tongFinal-tongGoc)<=1){
+        ckPctHD='0%';
+      }
       html+='<div class="sp-list">'+
         '<div class="sp-grid head"><div>SP</div><div style="text-align:center;">TT</div><div class="num">SL</div><div class="num">Đơn giá</div><div class="num">Thành tiền</div><div class="num">CK%</div><div class="num">Sau VAT</div></div>';
       (h.sps||[]).forEach(s=>{
         var phCls=s.isPlaceholder?' ph':'';
-        var ckPct=(s.thanhTienGoc>0 && s.thanhTienFinal!==s.thanhTienGoc)?Math.round((1-s.thanhTienFinal/s.thanhTienGoc)*100)+'%':'—';
         var spTt=(s.tinhTrang||'').toLowerCase();
         var spTtBadge='<span class="bf bf-tm">Giao</span>';
         if(spTt.indexOf('tặng')>=0||spTt.indexOf('tang')>=0) spTtBadge='<span class="bf" style="background:#FFE5B4;color:#854F0B;">Tặng</span>';
@@ -974,10 +985,17 @@ function renderDsLeft(){
           '<div class="num">'+(s.soLuong||0)+'</div>'+
           '<div class="num">'+(s.donGia?s.donGia.toLocaleString('vi-VN'):'—')+'</div>'+
           '<div class="num">'+(s.thanhTienGoc?s.thanhTienGoc.toLocaleString('vi-VN'):'0')+'</div>'+
-          '<div class="num">'+ckPct+'</div>'+
-          '<div class="num">'+(s.thanhTienFinal?s.thanhTienFinal.toLocaleString('vi-VN'):'0')+'</div>'+
+          '<div class="num" style="color:#aaa;">—</div>'+
+          '<div class="num" style="color:#aaa;">—</div>'+
         '</div>';
       });
+      // Footer row: tong HD (Goc / CK% / Sau VAT)
+      html+='<div class="sp-grid" style="border-top:1px solid #ccc; padding-top:4px; font-weight:600; background:rgba(0,0,0,0.02);">'+
+        '<div style="grid-column: span 4; text-align:right; font-size:10px; color:var(--mu); text-transform:uppercase; letter-spacing:0.3px;">TỔNG HD</div>'+
+        '<div class="num">'+tongGoc.toLocaleString('vi-VN')+'</div>'+
+        '<div class="num" style="color:'+(ckPctHD.indexOf('-')>=0?'var(--re)':'var(--grd)')+';">'+ckPctHD+'</div>'+
+        '<div class="num">'+tongFinal.toLocaleString('vi-VN')+'</div>'+
+      '</div>';
       html+='</div>';
     }
     html+='</div>';
